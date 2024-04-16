@@ -7,6 +7,7 @@
 library(here)
 library(data.table)
 library(tidyverse)
+library(uuid)
 library(LivingNorwayR)
 
 # 1. READ IN DATA ----
@@ -20,8 +21,6 @@ example_data <- fread(here("raw_data", "example_veg_data",
                            "occurrence.txt"))
 
 # 2. CREATE OCCURRENCE FILE ----
-
-## 2.1. Convert data to long format ----
 
 # Remove unneccesary columns
 veg_truncated <- veg_data |>
@@ -37,13 +36,17 @@ veg_long <- veg_truncated |>
          institutionCode = "NTNU-VM",
          ownerInstitutionCode = "NTNU-VM",
          basisOfRecord = "HumanObservation",
-         occurrenceID = NA_real_,
+         occurrenceID = sapply(1:n(), function(x) UUIDgenerate()),
          organismQuantityType = "Frequency",
          kingdom = "Plantae")
 
 # Remove the underline from species names
 veg_spp_name <- veg_long |>
-  mutate(scientificName = gsub("_", " ", scientificName))
+  mutate(scientificName = gsub("_", " ", scientificName)) |>
+  # reorder columns
+  select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
+         organismQuantity, organismQuantityType, scientificName,
+         kingdom)
 
 
 
