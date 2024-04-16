@@ -21,8 +21,12 @@ example_data <- fread(here("raw_data", "example_veg_data",
                            "occurrence.txt"))
 
 # Read in example event data
-example_event <- fread(here("raw_data", "example_veg_data",
+example_event_grazing <- fread(here("raw_data", "example_veg_data",
                             "event.txt"))
+
+example_event_setesdal <- fread(here("raw_data", "example_setesdal_data",
+                                    "event.txt"))
+
 
 # 2. CREATE OCCURRENCE FILE ----
 
@@ -58,7 +62,7 @@ write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
 # 3. CREATE EVENT FILE ----
 
 # Check columns in example event
-colnames(example_event)
+colnames(example_event_grazing)
 
 # Subset columns for Site, Transect and Quadrat from dataframe
 veg_event_truncated <-  veg_data |>
@@ -79,13 +83,15 @@ veg_event_truncated <-  veg_data |>
 # Re-arrange columns so the order matches
 veg_event_reordered <- veg_event_truncated |>
   # extract month from Date column - then remove the others
-  mutate(Date = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%m"))) |>
+  mutate(month = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%m")),
+         day = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%d"))) |>
   # reorder columns
-  select(id, type, ownerInstitutionCode, eventID, Site, year, Date, Transect,
+  select(id, type, ownerInstitutionCode, eventID, Site, year, month, day, Transect,
          Quadrat, continent, country, municipality, decimalLatitude, decimalLongitude,
          geodeticDatum) |>
-  rename(month = Date,
-         parentEventID = Site)
+  rename(parentEventID = Site,
+         locationID = Transect,
+         fieldNumber = Quadrat)
 
 
 
