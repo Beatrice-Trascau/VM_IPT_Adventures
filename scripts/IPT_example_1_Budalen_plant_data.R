@@ -101,7 +101,7 @@ parent_to_site <- veg_event_truncated |>
   drop_na()
 
 # Create new dataframe for the unique rows
-new_rows <- data.frame(
+new_rows_transects <- data.frame(
   eventID_temporary = unique_transectIDs,
   parentEventID_temporary = parent_to_site$Site[match(unique_transectIDs, parent_to_site$parentEventID_temporary)],
   eventRemarks = "transect event",
@@ -127,38 +127,66 @@ new_rows <- data.frame(
 )
 
 # Bind rows at the top of the original df
-veg_event_transects <- rbind(new_rows, veg_event_truncated)
+veg_event_transects <- rbind(new_rows_transects, veg_event_truncated)
 
 ## 3.3. Add the unique sites as events and give them IDs ----
 
-#
+# Extract unique site names
+unique_siteIDs <- unique(veg_event_truncated$Site)
 
+# Create new dataframe for the unique Site rows
+new_rows_sites <- data.frame(
+  eventID_temporary = unique_siteIDs,
+  parentEventID_temporary = NA,
+  eventRemarks = "Site",
+  eventID = sapply(1:length(unique_siteIDs), function(x) UUIDgenerate()),
+  parentEventID = NA,
+  Date = NA,
+  Site = NA,
+  Transect = NA,
+  Quadrat = NA,
+  id = NA,
+  type = "Event",
+  ownerInstitutionCode = "NTNU-VM",
+  year = "2023",
+  continent = "Europe",
+  country = "Norway",
+  municipality = "Budal",
+  decimalLatitude = NA,
+  decimalLongitude = NA,
+  geodeticDatum = "WGS84",
+  month = NA,
+  day = NA,
+  stringsAsFactors = FALSE
+)
 
+# Bind rows at the top of the original df
+veg_event_sites <- rbind(new_rows_sites, veg_event_transects)
 
-### Experimental zone -----
-# Create Site event rows (with parentIDs)
-sites <- veg_event_truncated |>
-  distinct(Site) |>
-  mutate(siteID = map_chr(row_number(), ~UUIDgenerate())) |>
-  rename(site_name = Site)
+## 3.4. Map parentEventIDs to the eventIDs ----
 
-# Create helper function to find matching sideID
-find_siteID <- function(transect_name) {
-  # Create a logical vector to test if each site_name is in the transect_name
-  matches <- sapply(sites$site_name, function(name) str_detect(transect_name, pattern = paste0("^", name, "|", name, "_")))
-  if (any(matches)) {
-    # Return the siteID where there's a match
-    return(sites$siteID[matches])
+# Create mapping from event_ID_temporary to event_ID
+id_mapping <- veg_event_sites |>
+  select(eventID_temporary, eventID) |>
+  distinct() |>
+  drop_na()
+
+# Create function that will apply this mapping 
+find_parent_eventID <- function(parent_event_temp) {
+  if (is.na(parent_event_temp)) {
+    return(NA)  # return NA for rows where parentEventID_temporary is NA
   } else {
-    # Return NA if no matches
-    return(NA)
+    # find the eventID corresponding to the parentEventID_temporary
+    event_id <- id_mapping$eventID[id_mapping$eventID_temporary == parent_event_temp]
+    if (length(event_id) > 0) {
+      return(event_id)
+    } else {
+      return(NA)  # return NA if no corresponding eventID is found
+    }
   }
 }
 
-# Create Transect event rows (with parentIDs)
-transects <- veg_event_truncated %>%
-  distinct(parentEventID_temporary) %>%
-  mutate(
-    transectID = map_chr(row_number(), ~ UUIDgenerate()),
-    parentID = sapply(parentEventID_temporary, find_siteID)
-  )
+
+# Apply function to dataframe
+veg_event <- veg_event_sites |>
+  mutate(parentEventID = sapply(parentEventID_temporary, find_parent_eventID))
