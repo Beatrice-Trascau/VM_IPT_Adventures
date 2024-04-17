@@ -63,40 +63,76 @@ write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
 # Check columns in example event
 colnames(example_event_grazing)
 
-# Subset columns for Site, Transect and Quadrat from dataframe
+## 3.1. Subset vegetation data to contain the needed columns ----
 veg_event_truncated <-  veg_data |>
   select(2, 4:6) |>
   mutate(eventID_temporary = str_c(Site, Transect, Quadrat, sep = "_"),
          parentEventID_temporary = str_c(Site, Transect, sep = "_"),
-         eventRemarks = "quadrat sampling") |>
+         eventRemarks = "quadrat sampling",
+         id = sapply(1:n(), function(x) UUIDgenerate()),
+         type = "Event",
+         ownerInstitutionCode = "NTNU-VM",
+         eventID = id,
+         year = "2023",
+         continent = "Europe",
+         country = "Norway",
+         municipality = "Budal",
+         decimalLatitude = NA_real_,
+         decimalLongitude = NA_real_,
+         geodeticDatum = "WGS84",
+         month = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%m")),
+         day = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%d")),
+         parentEventID = NA_real_) |>
   select(eventID_temporary, parentEventID_temporary, eventRemarks, 
-         Site, Transect, Quadrat)
+         eventID, parentEventID, Date, Site, Transect, Quadrat,
+         id, type, ownerInstitutionCode, year, continent, country,
+         municipality, decimalLatitude, decimalLongitude, geodeticDatum,
+         month, day)
 
-  # add missing columns
-  # mutate(id = sapply(1:n(), function(x) UUIDgenerate()),
-  #        type = "Event",
-  #        ownerInstitutionCode = "NTNU-VM",
-  #        eventID = id,
-  #        year = "2023",
-  #        continent = "Europe",
-  #        country = "Norway",
-  #        municipality = "Budal",
-  #        decimalLatitude = NA_real_,
-  #        decimalLongitude = NA_real_,
-  #        geodeticDatum = "WGS84")
+## 3.2. Add the unique transects as events and give them IDs ----
 
-# Re-arrange columns so the order matches
-veg_event_reordered <- veg_event_truncated |>
-  # extract month from Date column - then remove the others
-  mutate(month = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%m")),
-         day = as.integer(format(as.Date(Date, format = "%d.%m.%Y"), "%d"))) |>
-  # reorder columns
-  select(id, type, ownerInstitutionCode, eventID, Site, year, month, day, Transect,
-         Quadrat, continent, country, municipality, decimalLatitude, decimalLongitude,
-         geodeticDatum) |>
-  rename(parentEventID = Site,
-         locationID = Transect,
-         fieldNumber = Quadrat)
+# Extract the unique transect names 
+unique_transectIDs <- unique(veg_event_truncated$parentEventID_temporary)
+
+# Map parentEventID_temporary to Site
+parent_to_site <- veg_event_truncated |>
+  select(parentEventID_temporary, Site) |>
+  distinct() |>
+  drop_na()
+
+# Create new dataframe for the unique rows
+new_rows <- data.frame(
+  eventID_temporary = unique_transectIDs,
+  parentEventID_temporary = parent_to_site$Site[match(unique_transectIDs, parent_to_site$parentEventID_temporary)],
+  eventRemarks = "transect event",
+  eventID = sapply(1:length(unique_transectIDs), function(x) UUIDgenerate()),
+  parentEventID = NA,
+  Date = NA,
+  Site = NA,
+  Transect = NA,
+  Quadrat = NA,
+  id = NA,
+  type = "Event",
+  ownerInstitutionCode = "NTNU-VM",
+  year = "2023",
+  continent = "Europe",
+  country = "Norway",
+  municipality = "Budal",
+  decimalLatitude = NA,
+  decimalLongitude = NA,
+  geodeticDatum = "WGS84",
+  month = NA,
+  day = NA,
+  stringsAsFactors = FALSE
+)
+
+# Bind rows at the top of the original df
+veg_event_transects <- rbind(new_rows, veg_event_truncated)
+
+## 3.3. Add the unique sites as events and give them IDs ----
+
+#
+
 
 
 ### Experimental zone -----
@@ -126,6 +162,3 @@ transects <- veg_event_truncated %>%
     transectID = map_chr(row_number(), ~ UUIDgenerate()),
     parentID = sapply(parentEventID_temporary, find_siteID)
   )
-
-
-
