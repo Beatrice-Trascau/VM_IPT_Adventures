@@ -190,3 +190,53 @@ find_parent_eventID <- function(parent_event_temp) {
 # Apply function to dataframe
 veg_event <- veg_event_sites |>
   mutate(parentEventID = sapply(parentEventID_temporary, find_parent_eventID))
+
+# Remove unneccesary columns are re-order columns
+veg_event <- veg_event |>
+  # rename some columns
+  rename(site = Site,
+         locationID = Transect,
+         fieldNumber = Quadrat) |>
+  # add elevation column - empty for noe
+  mutate(verbatimElevation = NA,
+         id = eventID) |>
+  # reorder columns
+  select(id, type, ownerInstitutionCode, eventID, parentEventID, year,
+         month, day, site, locationID, fieldNumber, continent, country,
+         municipality, verbatimElevation, decimalLatitude, decimalLongitude) |>
+  # add elevation, latitude and longitude - data just received
+  mutate(verbatimElevation = case_when(
+    site == "FH1" ~ 755,
+    site == "FH2" ~ 789,
+    site == "FH3" ~ 819,
+    site == "EG1" ~ 843,
+    site == "EG2" ~ 871,
+    site == "EG3" ~ 858,
+    site == "IG1" ~ 778,
+    site == "IG2" ~ 781,
+    site == "IG3" ~ 782),
+    decimalLatitude = case_when(
+      site == "FH1" ~ 62.734964,
+      site == "FH2" ~ 62.734905,
+      site == "FH3" ~ 62.736355,
+      site == "EG1" ~ 62.732242,
+      site == "EG2" ~ 62.731253,
+      site == "EG3" ~ 62.732208,
+      site == "IG1" ~ 62.728650,
+      site == "IG2" ~ 62.728993,
+      site == "IG3" ~ 62.729156),
+    decimalLongitude = case_when(
+      site == "FH1" ~ 10.683115,
+      site == "FH2" ~ 10.686017,
+      site == "FH3" ~ 10.683845,
+      site == "EG1" ~ 10.700742,
+      site == "EG2" ~ 10.705989,
+      site == "EG3" ~ 10.702540,
+      site == "IG1" ~ 10.702922,
+      site == "IG2" ~ 10.702122,
+      site == "IG3" ~ 10.701814
+    )) 
+
+
+
+
