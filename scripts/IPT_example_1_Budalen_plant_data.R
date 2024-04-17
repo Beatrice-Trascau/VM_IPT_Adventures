@@ -27,7 +27,6 @@ example_event_grazing <- fread(here("raw_data", "example_veg_data",
 example_event_setesdal <- fread(here("raw_data", "example_setesdal_data",
                                     "event.txt"))
 
-
 # 2. CREATE OCCURRENCE FILE ----
 
 # Remove unneccesary columns
@@ -67,18 +66,24 @@ colnames(example_event_grazing)
 # Subset columns for Site, Transect and Quadrat from dataframe
 veg_event_truncated <-  veg_data |>
   select(2, 4:6) |>
+  mutate(eventID_temporary = str_c(Site, Transect, Quadrat, sep = "_"),
+         parentEventID_temporary = str_c(Site, Transect, sep = "_"),
+         eventRemarks = "quadrat sampling") |>
+  select(eventID_temporary, parentEventID_temporary, eventRemarks, 
+         Site, Transect, Quadrat)
+
   # add missing columns
-  mutate(id = sapply(1:n(), function(x) UUIDgenerate()),
-         type = "Event",
-         ownerInstitutionCode = "NTNU-VM",
-         eventID = id,
-         year = "2023",
-         continent = "Europe",
-         country = "Norway",
-         municipality = "Budal",
-         decimalLatitude = NA_real_,
-         decimalLongitude = NA_real_,
-         geodeticDatum = "WGS84")
+  # mutate(id = sapply(1:n(), function(x) UUIDgenerate()),
+  #        type = "Event",
+  #        ownerInstitutionCode = "NTNU-VM",
+  #        eventID = id,
+  #        year = "2023",
+  #        continent = "Europe",
+  #        country = "Norway",
+  #        municipality = "Budal",
+  #        decimalLatitude = NA_real_,
+  #        decimalLongitude = NA_real_,
+  #        geodeticDatum = "WGS84")
 
 # Re-arrange columns so the order matches
 veg_event_reordered <- veg_event_truncated |>
@@ -93,6 +98,34 @@ veg_event_reordered <- veg_event_truncated |>
          locationID = Transect,
          fieldNumber = Quadrat)
 
+
+### Experimental zone -----
+# Create Site event rows (with parentIDs)
+sites <- veg_event_truncated |>
+  distinct(Site) |>
+  mutate(siteID = map_chr(row_number(), ~UUIDgenerate())) |>
+  rename(site_name = Site)
+
+# Create helper function to find matching sideID
+find_siteID <- function(transect_name) {
+  # Create a logical vector to test if each site_name is in the transect_name
+  matches <- sapply(sites$site_name, function(name) str_detect(transect_name, pattern = paste0("^", name, "|", name, "_")))
+  if (any(matches)) {
+    # Return the siteID where there's a match
+    return(sites$siteID[matches])
+  } else {
+    # Return NA if no matches
+    return(NA)
+  }
+}
+
+# Create Transect event rows (with parentIDs)
+transects <- veg_event_truncated %>%
+  distinct(parentEventID_temporary) %>%
+  mutate(
+    transectID = map_chr(row_number(), ~ UUIDgenerate()),
+    parentID = sapply(parentEventID_temporary, find_siteID)
+  )
 
 
 
