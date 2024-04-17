@@ -27,43 +27,12 @@ example_event_grazing <- fread(here("raw_data", "example_veg_data",
 example_event_setesdal <- fread(here("raw_data", "example_setesdal_data",
                                     "event.txt"))
 
-# 2. CREATE OCCURRENCE FILE ----
-
-# Remove unneccesary columns
-veg_truncated <- veg_data |>
-  select(8:53)
-
-# Convert to long format
-veg_long <- veg_truncated |>
-  # add columns: id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID, organismQuantityType
-  pivot_longer(cols = 1:46,
-               names_to = "scientificName",
-               values_to = "organismQuantity") |>
-  mutate(id = NA_real_,
-         institutionCode = "NTNU-VM",
-         ownerInstitutionCode = "NTNU-VM",
-         basisOfRecord = "HumanObservation",
-         occurrenceID = sapply(1:n(), function(x) UUIDgenerate()),
-         organismQuantityType = "Frequency",
-         kingdom = "Plantae")
-
-# Remove the underline from species names
-veg_spp_name <- veg_long |>
-  mutate(scientificName = gsub("_", " ", scientificName)) |>
-  # reorder columns
-  select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
-         organismQuantity, organismQuantityType, scientificName,
-         kingdom)
-
-# Save new data as an occurrence df
-write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
-
-# 3. CREATE EVENT FILE ----
+# 2. CREATE EVENT FILE ----
 
 # Check columns in example event
 colnames(example_event_grazing)
 
-## 3.1. Subset vegetation data to contain the needed columns ----
+## 2.1. Subset vegetation data to contain the needed columns ----
 veg_event_truncated <-  veg_data |>
   select(2, 4:6) |>
   mutate(eventID_temporary = str_c(Site, Transect, Quadrat, sep = "_"),
@@ -89,7 +58,7 @@ veg_event_truncated <-  veg_data |>
          municipality, decimalLatitude, decimalLongitude, geodeticDatum,
          month, day)
 
-## 3.2. Add the unique transects as events and give them IDs ----
+## 2.2. Add the unique transects as events and give them IDs ----
 
 # Extract the unique transect names 
 unique_transectIDs <- unique(veg_event_truncated$parentEventID_temporary)
@@ -135,7 +104,7 @@ new_rows_transects <- new_rows_transects |>
 # Bind rows at the top of the original df
 veg_event_transects <- rbind(new_rows_transects, veg_event_truncated)
 
-## 3.3. Add the unique sites as events and give them IDs ----
+## 2.3. Add the unique sites as events and give them IDs ----
 
 # Extract unique site names
 unique_siteIDs <- unique(veg_event_truncated$Site)
@@ -173,7 +142,7 @@ new_rows_sites <- new_rows_sites |>
 # Bind rows at the top of the original df
 veg_event_sites <- rbind(new_rows_sites, veg_event_transects)
 
-## 3.4. Map parentEventIDs to the eventIDs ----
+## 2.4. Map parentEventIDs to the eventIDs ----
 
 # Create mapping from event_ID_temporary to event_ID
 id_mapping <- veg_event_sites |>
@@ -246,6 +215,62 @@ veg_event <- veg_event |>
       site == "IG2" ~ 10.702122,
       site == "IG3" ~ 10.701814
     )) 
+
+# Write event file to folder
+write_delim(veg_event, here("data", "event.txt"), delim = "\t")
+
+# 3. CREATE OCCURRENCE FILE ----
+
+## 3.1. Prepare data for occurrence file ----
+
+# Remove unnecessary columns
+veg_truncated <- veg_data |>
+  select(4:6, 8:53) |>
+  # create new column that combines site_transect_quadrat
+  mutate(quadrat_id = str_c(Site, Transect, Quadrat, sep = "_"))
+
+# Convert to long format
+veg_long <- veg_truncated |>
+  select(-c(Site, Transect, Quadrat)) |>
+  # add columns: id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID, organismQuantityType
+  pivot_longer(cols = 1:46,
+               names_to = "scientificName",
+               values_to = "organismQuantity") |>
+  mutate(id = NA_real_,
+         institutionCode = "NTNU-VM",
+         ownerInstitutionCode = "NTNU-VM",
+         basisOfRecord = "HumanObservation",
+         occurrenceID = sapply(1:n(), function(x) UUIDgenerate()),
+         organismQuantityType = "Frequency",
+         kingdom = "Plantae")
+
+## 3.2. Add eventIDs of quadrats to the id column for each record ----
+
+# Make a 2-column df to map eventID to the quadratID
+veg_event_truncated_ids <- veg_event_truncated |>
+  select(eventID_temporary, eventID)
+
+# Create mapping
+map <- veg_event_truncated_ids |> 
+  deframe()
+
+# Add id values to the vegetation dataframe
+veg_long_id <- veg_long |>
+  mutate(id = map[quadrat_id])
+
+## 3.3. Final adjustments to occurrence file ----
+
+# Remove the underline from species names
+veg_spp_name <- veg_long_id |>
+  mutate(scientificName = gsub("_", " ", scientificName)) |>
+  # reorder columns
+  select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
+         organismQuantity, organismQuantityType, scientificName,
+         kingdom)
+
+# Save new data as an occurrence df
+write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
+
 
 
 
