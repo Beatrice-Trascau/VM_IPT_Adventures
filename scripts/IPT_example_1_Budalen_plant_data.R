@@ -126,6 +126,12 @@ new_rows_transects <- data.frame(
   stringsAsFactors = FALSE
 )
 
+# Give values to sites column
+new_rows_transects <- new_rows_transects |>
+  mutate(Site = parentEventID_temporary,
+         Transect = rep(1:5, 9))
+
+
 # Bind rows at the top of the original df
 veg_event_transects <- rbind(new_rows_transects, veg_event_truncated)
 
@@ -159,6 +165,10 @@ new_rows_sites <- data.frame(
   day = NA,
   stringsAsFactors = FALSE
 )
+
+# Add values to sites column
+new_rows_sites <- new_rows_sites |>
+  mutate(Site = eventID_temporary)
 
 # Bind rows at the top of the original df
 veg_event_sites <- rbind(new_rows_sites, veg_event_transects)
