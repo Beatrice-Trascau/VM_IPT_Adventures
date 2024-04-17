@@ -8,7 +8,7 @@ library(here)
 library(data.table)
 library(tidyverse)
 library(uuid)
-library(LivingNorwayR)
+library(rgbif)
 
 # 1. READ IN DATA ----
 
@@ -267,6 +267,15 @@ veg_spp_name <- veg_long_id |>
   select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
          organismQuantity, organismQuantityType, scientificName,
          kingdom)
+
+## 3.4. Check species names ----
+
+# Extract dataframe of backbone check 
+checked_names <- as.data.frame(name_backbone_checklist(veg_spp_name))
+
+# Extract records where the matchType is not exact
+flagged_records <- checked_names |>
+  filter(matchType != "EXACT")
 
 # Save new data as an occurrence df
 write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
