@@ -35,7 +35,7 @@ poll_data <- raw_poll_data |>
 poll_data_long <- poll_data |>
   #select(-Site) |>
   # add columns: id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID, organismQuantityType
-  pivot_longer(cols = 3:23,
+  pivot_longer(cols = 3:24,
                names_to = "scientificName",
                values_to = "organismQuantity") |>
   mutate(id = NA_real_,
@@ -101,8 +101,12 @@ poll_data_taxonomy <- poll_data_long_id |>
                                                  "Bombus_consobrinus") ~ "Bombus",
                            scientificName == "Apis_mellifera" ~ "Apis"),
          # fix misspelling of Boloria genus
-         scientificName = str_replace_all(scientificName, "Bolonia", "Boloria"))
+         scientificName = str_replace_all(scientificName, "Bolonia", "Boloria"),
+         scientificName = str_replace_all(scientificName, "Bombus_monticola.lapponicus", "Bombus"),
+         id = relatedResourceID)
 
+# Save new data as an occurrence df
+write_delim(poll_data_taxonomy, here("data", "pollinator_core.txt"), delim = "\t")
 
 
 
