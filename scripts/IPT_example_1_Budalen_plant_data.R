@@ -262,16 +262,29 @@ veg_long_id <- veg_long |>
 
 # Remove the underline from species names
 veg_spp_name <- veg_long_id |>
-  mutate(scientificName = gsub("_", " ", scientificName)) |>
+  mutate(scientificName = gsub("_", " ", scientificName),
+         scientificName = str_replace_all(scientificName, " sp", "")) |>
   # reorder columns
   select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
          organismQuantity, organismQuantityType, scientificName,
          kingdom)
 
+# Get a list of the species only identified to genus level
+genus_only <- veg_spp_name |>
+  filter(str_count(scientificName, pattern = "\\s") == 0)
+
+# Get genus name
+unique(genus_only$scientificName) #"Alchemilla" "Taraxacum"  "Hieracium"  "Myosotis"
+
+# Add column in df stating the smallest identified rank
+veg_spp_rank <- veg_spp_name |>
+  mutate(scientificNameRank = if_else(scientificName %in% c("Alchemilla","Taraxacum",
+                                                            "Hieracium" ,"Myosotis"), "genus", "species"))
+
 ## 3.4. Check species names ----
 
 # Extract dataframe of backbone check 
-checked_names <- as.data.frame(name_backbone_checklist(veg_spp_name))
+checked_names <- as.data.frame(name_backbone_checklist(veg_spp_rank))
 
 # Extract records where the matchType is not exact
 flagged_records <- checked_names |>
