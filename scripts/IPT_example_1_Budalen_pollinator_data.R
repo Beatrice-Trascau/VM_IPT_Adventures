@@ -102,8 +102,45 @@ poll_data_taxonomy <- poll_data_long_id |>
                            scientificName == "Apis_mellifera" ~ "Apis"),
          # fix misspelling of Boloria genus
          scientificName = str_replace_all(scientificName, "Bolonia", "Boloria"),
+         scientificName = str_replace_all(scientificName, "Bombus_wurfleinii", "Bombus_wurflenii"),
          scientificName = str_replace_all(scientificName, "Bombus_monticola.lapponicus", "Bombus"),
-         id = relatedResourceID)
+         scientificName = str_replace_all(scientificName, "Bombus_hortorum.jonellus", "Bombus"),
+         scientificName = str_replace_all(scientificName, "Bombus_lucorum.terrestris", "Bombus"),
+         id = relatedResourceID) |>
+  rename(habitat = site)
+
+# Fix the names in the scientificName column
+poll_data_correct_names <- poll_data_taxonomy |>
+  mutate(scientificName = gsub("_", " ", scientificName),
+         scientificName = str_replace_all(scientificName, " sp", ""),
+         scientificName = str_replace_all(scientificName, ".moth.", ""))
+
+# Add taxonRank column
+poll_data_rank <- poll_data_correct_names |>
+  mutate(scientificNameRank = case_when(scientificName %in% c("Lepidoptera", "Araneae") ~ "order",
+                                        scientificName %in% c("Brachycera", "Nematocera") ~ "suborder",
+                                        scientificName == "Syrphidae" ~ "family",
+                                        scientificName == "Bombus" ~ "genus",
+                                        scientificName %in% c("Plebejus idas", "Boloria thore",
+                                                              "Boloria euphrosyne", "Boloria selene",
+                                                              "Erebia ligea", "Bombus pratorum",
+                                                              "Bombus balteatus", "Apis mellifera",
+                                                              "Bombus lapidarius", "Bombus pascuorum",
+                                                              "Bombus consobrinus", "Bombus wurflenii") ~ "species")) |>
+  # re-order columns
+  select(id, institutionCode, ownerInstitutionCode, basisOfRecord, occurrenceID,
+         resourceID, organismQuantity, organismQuantityType, scientificName, 
+         resourceRelationshipID, relatedResourceID, relationshipRemarks, resourceScientificName,
+         kingdom, phylum, class, order, family, genus, scientificNameRank)
+
+
+## 2.4. Check if data is publishable with rgbif ----
+# Extract dataframe of backbone check 
+checked_names_a <- as.data.frame(name_backbone_checklist(poll_data_rank))
+
+# Extract records where the matchType is not exact
+flagged_records_a <- checked_names |>
+  filter(matchType != "EXACT")
 
 # Save new data as an occurrence df
 write_delim(poll_data_taxonomy, here("data", "pollinator_core.txt"), delim = "\t")
