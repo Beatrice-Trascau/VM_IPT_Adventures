@@ -136,19 +136,13 @@ poll_data_rank <- poll_data_correct_names |>
 
 ## 2.4. Check if data is publishable with rgbif ----
 # Extract dataframe of backbone check 
-checked_names_a <- as.data.frame(name_backbone_checklist(poll_data_rank))
+checked_names <- as.data.frame(name_backbone_checklist(poll_data_rank))
 
 # Extract records where the matchType is not exact
-flagged_records_a <- checked_names |>
-  filter(matchType != "EXACT")
+flagged_records <- checked_names |>
+  filter(matchType != "EXACT") # only records flagged are those with higher rank - ok!
 
 # Save new data as an occurrence df
-write_delim(poll_data_taxonomy, here("data", "pollinator_core.txt"), delim = "\t")
+write_delim(poll_data_rank, here("data", "pollinator_core.txt"), delim = "\t")
 
-
-
-
-
-
-
-
+# END OF SCRIPT ----
