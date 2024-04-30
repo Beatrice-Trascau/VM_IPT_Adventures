@@ -273,7 +273,8 @@ veg_spp_name <- veg_long_id |>
 genus_only <- veg_spp_name |>
   filter(str_count(scientificName, pattern = "\\s") == 0)
 
-# Get genus name
+# Get species and genus names
+sorted_unique_species <- sort(unique(veg_spp_name$scientificName))
 unique(genus_only$scientificName) #"Alchemilla" "Taraxacum"  "Hieracium"  "Myosotis"
 
 # Add column in df stating the smallest identified rank
@@ -290,10 +291,22 @@ checked_names <- as.data.frame(name_backbone_checklist(veg_spp_rank))
 flagged_records <- checked_names |>
   filter(matchType != "EXACT")
 
+# Fix names of misspelled records
+corrected_veg <- veg_spp_rank |>
+  mutate(scientificName = str_replace_all(scientificName, "Ranuncuus acris", "Ranunculus acris"),
+         scientificName = str_replace_all(scientificName, "Veronica serphyllifolia", "Veronica serpyllifolia"),
+         # remove dot in Vaccinium vitis.idaea
+         scientificName = str_replace_all(scientificName, "Vaccinium vitis.idaea", "Vaccinium vitis idaea"))
+
+# Check species names again
+rechecked_names <- as.data.frame(name_backbone_checklist(corrected_veg))
+
+# Extract records where the matchType is not exact
+reflagged_records <- rechecked_names |>
+  filter(matchType != "EXACT")
+
 # Save new data as an occurrence df
-write_delim(veg_spp_name, here("data", "occurrence.txt"), delim = "\t")
+write_delim(corrected_veg, here("data", "occurrence.txt"), delim = "\t")
 
 
-
-
-
+# END OF SCRIPT ----
