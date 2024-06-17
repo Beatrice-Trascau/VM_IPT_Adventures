@@ -219,6 +219,18 @@ veg_event <- veg_event |>
 # Write event file to folder
 write_delim(veg_event, here("data", "event.txt"), delim = "\t")
 
+## 2.5. Update event core with basisOfRecord ----
+
+# Read in data
+event <- fread(here("data", "event.txt"))
+
+# Add basisOfRecord column
+event <- event |>
+  mutate(basisOfRecord = "HumanObservation")
+
+# Write event file to folder
+write_delim(event, here("data", "event.txt"), delim = "\t")
+
 # 3. CREATE OCCURRENCE FILE ----
 
 ## 3.1. Prepare data for occurrence file ----
